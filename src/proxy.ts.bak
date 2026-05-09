@@ -1,0 +1,42 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { verifyToken } from "./lib/auth";
+
+const publicRoutes = ["/login", "/register"];
+const adminRoutes = ["/admin"];
+const apiAuthRoutes = ["/api/auth"];
+
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  const isPublic = publicRoutes.some((r) => pathname.startsWith(r));
+  const isApiAuth = apiAuthRoutes.some((r) => pathname.startsWith(r));
+  const isAdmin = adminRoutes.some((r) => pathname.startsWith(r));
+  const isStatic =
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon") ||
+    pathname === "/";
+
+  if (isPublic || isApiAuth || isStatic) {
+    return NextResponse.next();
+  }
+
+  const token = request.cookies.get("session")?.value;
+  const payload = token ? verifyToken(token) : null;
+
+  if (!payload) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (isAdmin && payload.role !== "admin") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};
