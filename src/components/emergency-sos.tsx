@@ -6,11 +6,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Phone, X, AlertTriangle } from "lucide-react";
 
 const HELPLINES = [
-  { name: "Nagpur Suicide Prevention Helpline", number: "1800-123-4567", hours: "24/7" },
-  { name: "Nagpur Mental Health Support", number: "0712-256-7890", hours: "8:00 AM – 8:00 PM" },
-  { name: "Vandrevala Foundation Helpline", number: "1860-266-2345", hours: "24/7" },
-  { name: "iCall Psychosocial Helpline", number: "022-2556-3291", hours: "Mon–Sat, 8 AM–10 PM" },
-  { name: "NIMHANS Emergency Helpline", number: "080-2650-0050", hours: "24/7" },
+  { name: "Citywide Crisis Support Line", number: "1800-555-0199", hours: "24/7" },
+  { name: "Community Mental Health Helpline", number: "044-4555-6789", hours: "8:00 AM – 8:00 PM" },
+  { name: "National Emotional Support Network", number: "1860-555-2345", hours: "24/7" },
+  { name: "Wellness Connect Helpline", number: "022-4555-3291", hours: "Mon–Sat, 8 AM–10 PM" },
+  { name: "Institute of Mental Health Crisis Line", number: "080-4555-0050", hours: "24/7" },
 ];
 
 export default function EmergencySOS() {

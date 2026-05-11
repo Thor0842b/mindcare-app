@@ -5,6 +5,15 @@ import { X, ArrowLeft, Film, Headphones, FileText, Play, Pause } from "lucide-re
 import { motion, AnimatePresence } from "framer-motion";
 import { Resource } from "@/lib/types";
 
+function getEmbedUrl(url: string | undefined, embedUrl: string | undefined): string | undefined {
+  if (embedUrl) return embedUrl;
+  if (!url) return undefined;
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?#]+)/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  if (url.includes("youtube.com/embed")) return url;
+  return url;
+}
+
 const categoryIcons: Record<string, React.ReactNode> = {
   Video: <Film className="h-5 w-5" />,
   Audio: <Headphones className="h-5 w-5" />,
@@ -359,11 +368,11 @@ export function ResourceViewer({ resource, onClose }: Props) {
             </div>
           )}
 
-          {resource.category === "Video" && resource.embedUrl && (
+          {resource.category === "Video" && (resource.embedUrl || resource.url) && (
             <div className="mx-auto max-w-4xl px-6 py-8">
               <div className="rounded-2xl overflow-hidden shadow-sm border border-border bg-black aspect-video">
                 <iframe
-                  src={resource.embedUrl}
+                  src={getEmbedUrl(resource.url, resource.embedUrl)}
                   title={resource.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen

@@ -66,7 +66,8 @@ export default function AdminDashboard() {
   const [uploading, setUploading] = useState(false);
   const [chartFile, setChartFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const dragSourceRef = useRef<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const chartFileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -700,12 +701,12 @@ export default function AdminDashboard() {
                 <div
                   key={r.id}
                   draggable
-                  onDragStart={() => setDragIndex(idx)}
-                  onDragOver={(e) => { e.preventDefault(); setDragIndex(idx); }}
-                  onDrop={() => { if (dragIndex !== null) handleReorder(dragIndex, idx); setDragIndex(null); }}
-                  onDragEnd={() => setDragIndex(null)}
+                  onDragStart={() => { dragSourceRef.current = idx; setDragOverIndex(idx); }}
+                  onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
+                  onDrop={() => { const from = dragSourceRef.current; if (from !== null && from !== idx) handleReorder(from, idx); dragSourceRef.current = null; setDragOverIndex(null); }}
+                  onDragEnd={() => { dragSourceRef.current = null; setDragOverIndex(null); }}
                   className={`flex items-center justify-between rounded-xl px-4 py-3 transition-colors ${
-                    dragIndex === idx ? "bg-sage/10 ring-2 ring-sage/30" : "bg-background"
+                    dragOverIndex === idx ? "bg-sage/10 ring-2 ring-sage/30" : "bg-background"
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
