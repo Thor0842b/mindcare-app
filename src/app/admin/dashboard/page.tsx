@@ -6,13 +6,13 @@ import { motion } from "framer-motion";
 import {
   BookOpen, Plus, Trash2, Users, Search, PlayCircle,
   BarChart3, PieChart, Upload, FileText, ImageUp,
-  RotateCcw,
+  RotateCcw, CalendarDays, Clock, Fingerprint, CheckCircle, XCircle, Video, Ban, StickyNote,
 } from "lucide-react";
 import {
   BarChart, Bar, PieChart as RePieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { Resource, User, SurveyChartData } from "@/lib/types";
+import { Resource, User, SurveyChartData, Booking } from "@/lib/types";
 import toast from "react-hot-toast";
 
 const CHART_COLORS: Record<string, string[]> = {
@@ -26,11 +26,37 @@ const TYPE_BADGE: Record<string, { label: string; bg: string; text: string }> = 
   line: { label: "Line", bg: "bg-indigo-50", text: "text-indigo-600" },
 };
 
+function getSessionStatus(booking: Booking): { status: string; label: string; color: string; bg: string; rowGlow: boolean } {
+  if (booking.status === "cancelled") return { status: "cancelled", label: "Cancelled", color: "text-red-600", bg: "bg-red-50", rowGlow: false };
+  if (booking.status === "no-show") return { status: "no-show", label: "No Show", color: "text-orange-600", bg: "bg-orange-50", rowGlow: false };
+
+  const now = new Date();
+  const [timeStr, period] = booking.time.split(" ");
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  let hour = hours;
+  if (period === "PM" && hour !== 12) hour += 12;
+  if (period === "AM" && hour === 12) hour = 0;
+
+  const startTime = new Date(booking.date);
+  startTime.setHours(hour, minutes, 0, 0);
+  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+
+  if (now > endTime) return { status: "completed", label: "Completed", color: "text-emerald-600", bg: "bg-emerald-50", rowGlow: false };
+  if (now >= startTime && now <= endTime) return { status: "active", label: "In-Progress", color: "text-green-600", bg: "bg-green-100", rowGlow: true };
+  return { status: "upcoming", label: "Upcoming", color: "text-blue-600", bg: "bg-blue-50", rowGlow: false };
+}
+
 export default function AdminDashboard() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [students, setStudents] = useState<User[]>([]);
   const [surveyCharts, setSurveyCharts] = useState<SurveyChartData[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [verifyToken, setVerifyToken] = useState("");
+  const [verifiedBooking, setVerifiedBooking] = useState<Booking | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [notesBooking, setNotesBooking] = useState<Booking | null>(null);
+  const [notesText, setNotesText] = useState("");
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<"Video" | "Audio" | "Article">("Video");
   const [url, setUrl] = useState("");
@@ -45,17 +71,20 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   const fetchData = async () => {
-    const [resRes, progRes, surveyRes] = await Promise.all([
+    const [resRes, progRes, surveyRes, bookingsRes] = await Promise.all([
       fetch("/api/resources"),
       fetch("/api/progress"),
       fetch("/api/survey-data"),
+      fetch("/api/bookings"),
     ]);
     const resData = await resRes.json();
     const progData = await progRes.json();
     const surveyData = await surveyRes.json();
+    const bookingsData = await bookingsRes.json();
     setResources(resData.resources);
     setStudents(progData.students || []);
     setSurveyCharts(surveyData.charts || []);
+    setBookings(bookingsData.bookings || []);
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -356,6 +385,241 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Session Management */}
+      <div id="bookings" className="rounded-2xl bg-white border border-border shadow-sm mb-6">
+        <div className="flex items-center gap-3 border-b border-border px-6 py-4">
+          <Fingerprint className="h-5 w-5 text-sage" />
+          <h2 className="font-semibold text-slate">Session Management</h2>
+          <span className="ml-auto text-xs text-muted">{bookings.length} session{bookings.length !== 1 ? "s" : ""}</span>
+        </div>
+
+        {/* Token Verification */}
+        <div className="p-6 border-b border-border">
+          <h3 className="text-sm font-medium text-slate mb-3">Verify a Token</h3>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              placeholder="Enter token (e.g. MC-89X2-ZL)"
+              value={verifyToken}
+              onChange={(e) => { setVerifyToken(e.target.value.toUpperCase()); setVerifiedBooking(null); }}
+              className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm font-mono text-slate outline-none focus:border-sage transition-colors"
+            />
+            <button
+              onClick={async () => {
+                if (!verifyToken.trim()) return;
+                setVerifying(true);
+                try {
+                  const res = await fetch(`/api/bookings?token=${encodeURIComponent(verifyToken.trim())}`);
+                  if (!res.ok) { setVerifiedBooking(null); toast.error("Token not found"); return; }
+                  const data = await res.json();
+                  setVerifiedBooking(data.booking);
+                  toast.success("Token verified!");
+                } catch { toast.error("Verification failed"); }
+                finally { setVerifying(false); }
+              }}
+              disabled={!verifyToken.trim() || verifying}
+              className="flex items-center gap-2 rounded-xl bg-sage px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+            >
+              {verifying ? "Checking..." : <><CheckCircle className="h-4 w-4" /> Verify</>}
+            </button>
+          </div>
+
+          {verifiedBooking && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 rounded-xl bg-mint border border-sage/20 p-4"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span className="font-semibold text-green-700 text-sm">Valid Token</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted">Token</p>
+                  <p className="font-mono font-bold text-slate">{verifiedBooking.token}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted">Date</p>
+                  <p className="font-medium text-slate">{new Date(verifiedBooking.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted">Time</p>
+                  <p className="font-medium text-slate">{verifiedBooking.time}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted">Counselor</p>
+                  <p className="font-medium text-slate">{verifiedBooking.counselor}</p>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted mt-2">No student identity stored — fully anonymous.</p>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Session Management Table */}
+        <div className="p-6">
+          {bookings.length === 0 ? (
+            <p className="text-sm text-muted text-center py-6">No sessions yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-3 px-3 font-medium text-muted">Token ID</th>
+                    <th className="text-left py-3 px-3 font-medium text-muted">Appointment Time</th>
+                    <th className="text-left py-3 px-3 font-medium text-muted">Status</th>
+                    <th className="text-left py-3 px-3 font-medium text-muted">Assigned Counselor</th>
+                    <th className="text-right py-3 px-3 font-medium text-muted">Action / Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.map((b) => {
+                    const session = getSessionStatus(b);
+                    return (
+                      <tr
+                        key={b.id}
+                        className={`border-b border-border/50 transition-all ${
+                          session.rowGlow
+                            ? "bg-green-50/60 shadow-[0_0_0_1px_#22c55e40]"
+                            : "hover:bg-background/50"
+                        }`}
+                      >
+                        <td className="py-3.5 px-3">
+                          <span className="font-mono font-bold text-sage text-xs tracking-wider">{b.token}</span>
+                        </td>
+                        <td className="py-3.5 px-3">
+                          <div className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4 text-muted flex-shrink-0" />
+                            <span className="text-slate">{new Date(b.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                            <Clock className="h-4 w-4 text-muted flex-shrink-0" />
+                            <span className="text-slate">{b.time}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-3">
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${session.bg} ${session.color}`}>
+                            {session.status === "active" && <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />}
+                            {session.label}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-3 text-slate">{b.counselor}</td>
+                        <td className="py-3.5 px-3 text-right">
+                          {session.status === "completed" && (
+                            <button
+                              onClick={() => { setNotesBooking(b); setNotesText(b.notes || ""); }}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted hover:bg-background transition-colors"
+                            >
+                              <StickyNote className="h-3.5 w-3.5" />
+                              {b.notes ? "View Notes" : "Add Notes"}
+                            </button>
+                          )}
+                          {session.status === "active" && (
+                            <button
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-green-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-600 transition-colors shadow-sm"
+                            >
+                              <Video className="h-3.5 w-3.5" />
+                              Join Room
+                            </button>
+                          )}
+                          {session.status === "upcoming" && (
+                            <button
+                              onClick={async () => {
+                                if (!confirm(`Cancel session ${b.token}?`)) return;
+                                try {
+                                  const res = await fetch(`/api/bookings?id=${b.id}`, {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ status: "cancelled" }),
+                                  });
+                                  if (!res.ok) throw new Error("Failed to cancel");
+                                  setBookings((prev) => prev.map((b2) => b2.id === b.id ? { ...b2, status: "cancelled" } : b2));
+                                  toast.success("Session cancelled.");
+                                } catch { toast.error("Failed to cancel."); }
+                              }}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                              Cancel
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Session Notes Modal */}
+      {notesBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={() => setNotesBooking(null)}
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative w-full max-w-md rounded-2xl bg-white shadow-xl border border-border p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-slate">Session Notes</h3>
+              <button onClick={() => setNotesBooking(null)} className="rounded-full p-1 hover:bg-background transition-colors">
+                <XCircle className="h-5 w-5 text-muted" />
+              </button>
+            </div>
+            <div className="mb-4 space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted">
+                <Fingerprint className="h-3.5 w-3.5" />
+                <span className="font-mono font-bold text-slate">{notesBooking.token}</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted">
+                <CalendarDays className="h-3.5 w-3.5" />
+                {new Date(notesBooking.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} at {notesBooking.time}
+              </div>
+            </div>
+            <textarea
+              value={notesText}
+              onChange={(e) => setNotesText(e.target.value)}
+              placeholder="Add confidential session notes here..."
+              rows={6}
+              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm text-slate outline-none focus:border-sage transition-colors resize-none"
+            />
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setNotesBooking(null)}
+                className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium text-muted hover:bg-background transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/bookings?id=${notesBooking.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ notes: notesText }),
+                    });
+                    if (!res.ok) throw new Error("Failed to save");
+                    setBookings((prev) => prev.map((b2) => b2.id === notesBooking.id ? { ...b2, notes: notesText } : b2));
+                    toast.success("Notes saved.");
+                    setNotesBooking(null);
+                  } catch { toast.error("Failed to save notes."); }
+                }}
+                className="flex-1 rounded-xl bg-sage py-2.5 text-sm font-semibold text-white hover:bg-emerald-600 transition-colors"
+              >
+                Save Notes
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Resource Manager */}

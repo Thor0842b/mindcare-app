@@ -86,3 +86,14 @@ export interface TalkPost {
   message: string;
   createdAt: string;
 }
+
+export interface Booking {
+  id: string;
+  token: string;
+  date: string;
+  time: string;
+  counselor: string;
+  status?: "cancelled" | "no-show";
+  notes?: string;
+  createdAt: string;
+}

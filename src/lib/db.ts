@@ -1,9 +1,10 @@
-import { User, Resource, Progress, WallPost, JournalEntry, FinanceEntry, AcademicEvent, TalkPost } from "./types";
+import { User, Resource, Progress, WallPost, JournalEntry, FinanceEntry, AcademicEvent, TalkPost, Booking } from "./types";
 import bcrypt from "bcryptjs";
 import fs from "fs";
 import path from "path";
 
-const DATA_FILE = path.join(process.cwd(), ".data", "db.json");
+const DATA_DIR = process.env.VERCEL ? "/tmp/.data" : path.join(process.cwd(), ".data");
+const DATA_FILE = path.join(DATA_DIR, "db.json");
 
 interface Store {
   users: User[];
@@ -15,6 +16,7 @@ interface Store {
   finances?: FinanceEntry[];
   academicEvents?: AcademicEvent[];
   talkPosts?: TalkPost[];
+  bookings?: Booking[];
   nextUserId: number;
   nextResourceId: number;
   nextProgressId: number;
@@ -23,6 +25,7 @@ interface Store {
   nextFinanceId?: number;
   nextAcademicEventId?: number;
   nextTalkPostId?: number;
+  nextBookingId?: number;
 }
 
 function readStore(): Store {
@@ -63,6 +66,7 @@ function getDefaultStore(): Store {
     finances: [],
     academicEvents: [],
     talkPosts: [],
+    bookings: [],
     nextUserId: 5,
     nextResourceId: 6,
     nextProgressId: 1,
@@ -71,6 +75,7 @@ function getDefaultStore(): Store {
     nextFinanceId: 1,
     nextAcademicEventId: 1,
     nextTalkPostId: 1,
+    nextBookingId: 1,
   };
 }
 
@@ -298,6 +303,48 @@ export function createTalkPost(message: string): TalkPost {
 export function deleteTalkPost(id: string) {
   const store = readStore();
   store.talkPosts = (store.talkPosts || []).filter((p) => p.id !== id);
+  writeStore(store);
+}
+
+// --- Bookings (anonymous - no userId) ---
+export function createBooking(date: string, time: string, counselor: string, token: string): Booking {
+  const store = readStore();
+  if (!store.nextBookingId) store.nextBookingId = (store.bookings?.length || 0) + 1;
+  const booking: Booking = {
+    id: `b${store.nextBookingId++}`,
+    token,
+    date,
+    time,
+    counselor,
+    createdAt: new Date().toISOString(),
+  };
+  if (!store.bookings) store.bookings = [];
+  store.bookings.push(booking);
+  writeStore(store);
+  return booking;
+}
+
+export function getBookings(): Booking[] {
+  return readStore().bookings || [];
+}
+
+export function getBookingByToken(token: string): Booking | undefined {
+  return (readStore().bookings || []).find((b) => b.token === token);
+}
+
+export function updateBooking(id: string, updates: { status?: string; notes?: string }): Booking | null {
+  const store = readStore();
+  const booking = (store.bookings || []).find((b) => b.id === id);
+  if (!booking) return null;
+  if (updates.status) booking.status = updates.status as "cancelled" | "no-show";
+  if (updates.notes !== undefined) booking.notes = updates.notes;
+  writeStore(store);
+  return booking;
+}
+
+export function deleteBooking(id: string) {
+  const store = readStore();
+  store.bookings = (store.bookings || []).filter((b) => b.id !== id);
   writeStore(store);
 }
 

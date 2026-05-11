@@ -3,6 +3,7 @@
 import {
   LayoutDashboard,
   BookOpen,
+  Fingerprint,
   LogOut,
   Menu,
   X,
@@ -14,6 +15,7 @@ import Link from "next/link";
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/dashboard#resources", label: "Resources", icon: BookOpen },
+  { href: "/admin/dashboard#bookings", label: "Bookings", icon: Fingerprint },
 ];
 
 export function AdminSidebar({ userName }: { userName: string }) {

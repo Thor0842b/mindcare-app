@@ -66,7 +66,7 @@
       "email": "devang@gmail.com",
       "password": "$2b$10$BsqEmtEyM39ecXeoOFXZt.2AYhFSllLQRwsXW/Er3uUck7V31QP1S",
       "role": "student",
-      "lastActive": "2026-05-09T18:00:59.809Z",
+      "lastActive": "2026-05-09T20:19:03.442Z",
       "modulesCompleted": 3,
       "createdAt": "2026-05-09T17:57:14.452Z"
     },
@@ -159,6 +159,26 @@
       "lastActive": "2026-05-09T19:09:36.808Z",
       "modulesCompleted": 0,
       "createdAt": "2026-05-09T19:09:36.808Z"
+    },
+    {
+      "id": "17",
+      "name": "Test User",
+      "email": "test@example.com",
+      "password": "$2b$10$OQJ8EQo6IpH7ucP.Q6jJCuMbnaUnGP4A3UIuFnTdYQdHh5Uy5DAYO",
+      "role": "student",
+      "lastActive": "2026-05-09T20:04:15.063Z",
+      "modulesCompleted": 0,
+      "createdAt": "2026-05-09T20:04:15.063Z"
+    },
+    {
+      "id": "18",
+      "name": "devang",
+      "email": "2@gmail.com",
+      "password": "$2b$10$VZF.PecIO8sJenS6pVhi2uGsj3xqjiUR611cOPIQpEa1LHpWYUOga",
+      "role": "admin",
+      "lastActive": "2026-05-11T14:16:50.767Z",
+      "modulesCompleted": 0,
+      "createdAt": "2026-05-11T14:16:50.767Z"
     }
   ],
   "resources": [
@@ -260,6 +280,18 @@
       "userId": "9",
       "resourceId": "r1",
       "interactedAt": "2026-05-09T18:03:34.170Z"
+    },
+    {
+      "id": "p9",
+      "userId": "7",
+      "resourceId": "r2",
+      "interactedAt": "2026-05-09T20:18:54.060Z"
+    },
+    {
+      "id": "p10",
+      "userId": "7",
+      "resourceId": "r1",
+      "interactedAt": "2026-05-09T20:19:03.442Z"
     }
   ],
   "surveyData": [
@@ -436,9 +468,9 @@
       "createdAt": "2026-05-09T17:44:07.406Z"
     }
   ],
-  "nextUserId": 17,
+  "nextUserId": 19,
   "nextResourceId": 7,
-  "nextProgressId": 9,
+  "nextProgressId": 11,
   "nextWallPostId": 3,
   "wallPosts": [
     {
@@ -630,6 +662,25 @@
       "id": "t1",
       "message": "Anyone else feeling overwhelmed with assignments?",
       "createdAt": "2026-05-09T18:47:13.505Z"
+    }
+  ],
+  "nextBookingId": 3,
+  "bookings": [
+    {
+      "id": "b1",
+      "token": "MC-JIVV-UW",
+      "date": "2026-05-11T18:30:00.000Z",
+      "time": "1:00 PM",
+      "counselor": "Sarah Mitchell, LCSW",
+      "createdAt": "2026-05-11T14:40:03.266Z"
+    },
+    {
+      "id": "b2",
+      "token": "MC-2NHB-BJ",
+      "date": "2026-05-13T18:30:00.000Z",
+      "time": "1:00 PM",
+      "counselor": "Dr. James Carter",
+      "createdAt": "2026-05-11T15:59:29.402Z"
     }
   ]
 }
