@@ -21,6 +21,7 @@ export interface Resource {
   embedUrl?: string;
   audioUrl?: string;
   body?: string;
+  sortOrder: number;
   createdAt: string;
 }
 

@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import {
   BookOpen, Plus, Trash2, Users, Search, PlayCircle,
   BarChart3, PieChart, Upload, FileText, ImageUp,
-  RotateCcw, CalendarDays, Clock, Fingerprint, CheckCircle, XCircle, Video, Ban, StickyNote,
+  RotateCcw, CalendarDays, Clock, Fingerprint, CheckCircle, XCircle, Video, Ban, StickyNote, GripVertical,
 } from "lucide-react";
 import {
   BarChart, Bar, PieChart as RePieChart, Pie, Cell, LineChart, Line,
@@ -66,6 +66,7 @@ export default function AdminDashboard() {
   const [uploading, setUploading] = useState(false);
   const [chartFile, setChartFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const chartFileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -137,6 +138,25 @@ export default function AdminDashboard() {
       setCategory("Video");
     } catch (err: any) { toast.error(err.message || "Failed to add resource"); }
     finally { setAdding(false); setUploading(false); }
+  };
+
+  const handleReorder = async (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    const reordered = [...resources];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+    setResources(reordered);
+    try {
+      const res = await fetch("/api/resources", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds: reordered.map((r) => r.id) }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      toast.error("Failed to save order");
+      fetchData();
+    }
   };
 
   const handleDeleteResource = async (id: string) => {
@@ -676,9 +696,22 @@ export default function AdminDashboard() {
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {resources.length === 0 ? (
                 <p className="text-sm text-muted text-center py-4">No resources yet.</p>
-              ) : resources.map((r) => (
-                <div key={r.id} className="flex items-center justify-between rounded-xl bg-background px-4 py-3">
-                  <div className="flex items-center gap-3 min-w-0">
+              ) : resources.map((r, idx) => (
+                <div
+                  key={r.id}
+                  draggable
+                  onDragStart={() => setDragIndex(idx)}
+                  onDragOver={(e) => { e.preventDefault(); setDragIndex(idx); }}
+                  onDrop={() => { if (dragIndex !== null) handleReorder(dragIndex, idx); setDragIndex(null); }}
+                  onDragEnd={() => setDragIndex(null)}
+                  className={`flex items-center justify-between rounded-xl px-4 py-3 transition-colors ${
+                    dragIndex === idx ? "bg-sage/10 ring-2 ring-sage/30" : "bg-background"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <div className="cursor-grab active:cursor-grabbing text-muted/40 hover:text-muted transition-colors flex-shrink-0">
+                      <GripVertical className="h-4 w-4" />
+                    </div>
                     <PlayCircle className="h-5 w-5 text-sage flex-shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate truncate">{r.title}</p>
