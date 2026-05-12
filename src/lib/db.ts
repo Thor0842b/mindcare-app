@@ -34,6 +34,17 @@ function readStore(): Store {
       return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
     }
   } catch {}
+  if (process.env.VERCEL) {
+    try {
+      const deployedDb = path.join(process.cwd(), ".data", "db.json");
+      if (fs.existsSync(deployedDb)) {
+        const dir = path.dirname(DATA_FILE);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.copyFileSync(deployedDb, DATA_FILE);
+        return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
+      }
+    } catch {}
+  }
   return getDefaultStore();
 }
 
